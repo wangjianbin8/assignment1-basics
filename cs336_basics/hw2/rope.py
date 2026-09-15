@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 
-class Rope(nn.Module):
+class RoPE(nn.Module):
     def __init__(self, theta: float, d_k: int, max_seq_len: int, device = None):
         super().__init__()
         if d_k % 2 != 0:
@@ -46,6 +46,34 @@ class Rope(nn.Module):
         # cos_cache 形状 [seq_len, d_k//2]，索引后得到 [batch_size, seq_len, d_k//2]
         cos = self.cos_cache[token_positions]
         sin = self.sin_cache[token_positions]
+
+        cos = cos.unsqueeze(1)
+        sin = sin.unsqueeze(1)
+        '''
+        于是：
+
+            cos
+            [B,T,d_k/2]
+
+            ↓
+
+            [B,1,T,d_k/2]
+
+            然后：
+
+            x_part1
+            [B,H,T,d_k/2]
+
+            cos
+            [B,1,T,d_k/2]
+
+            广播：
+
+            [B,H,T,d_k/2]
+            [B,1,T,d_k/2]
+               ↑
+            1 可以广播成 H
+        '''
 
         x_part1 = x[..., 0::2]
         x_part2 = x[..., 1::2]
