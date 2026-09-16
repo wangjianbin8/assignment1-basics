@@ -41,39 +41,16 @@ class RoPE(nn.Module):
         self.register_buffer("sin_cache", sinusoids.sin(), persistent=False)
 
     def forward(self, x, token_positions):
-        # x: (batch_size, seq_len, d_model)
-        # token_positions: (batch_size, seq_len)，每个 token 的位置索引
-        # cos_cache 形状 [seq_len, d_k//2]，索引后得到 [batch_size, seq_len, d_k//2]
+        # x: [..., seq_len, d_k]
+        # token_positions: [..., seq_len]
+        # cos_cache 形状 [max_seq_len, d_k//2]，索引后得到 [..., seq_len, d_k//2]
         cos = self.cos_cache[token_positions]
         sin = self.sin_cache[token_positions]
 
-        cos = cos.unsqueeze(1)
-        sin = sin.unsqueeze(1)
-        '''
-        于是：
-
-            cos
-            [B,T,d_k/2]
-
-            ↓
-
-            [B,1,T,d_k/2]
-
-            然后：
-
-            x_part1
-            [B,H,T,d_k/2]
-
-            cos
-            [B,1,T,d_k/2]
-
-            广播：
-
-            [B,H,T,d_k/2]
-            [B,1,T,d_k/2]
-               ↑
-            1 可以广播成 H
-        '''
+        #如果是多头，则cos比x少一个维度
+        if cos.ndim == x.ndim - 1:
+            cos = cos.unsqueeze(-3)
+            sin = sin.unsqueeze(-3)
 
         x_part1 = x[..., 0::2]
         x_part2 = x[..., 1::2]

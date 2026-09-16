@@ -2,6 +2,7 @@ import torch
 import torch.nn as nn
 import math
 import torch.nn.functional as F
+from einops import rearrange
 
 '''
 以后看到多头注意力，先写这几个：
@@ -95,28 +96,47 @@ class CausalMultiHeadAttention(nn.Module):
         return torch.matmul(attn_weights, V)
 
     def forward(self, x, wq, wk, wv, wo):
-        batch_size, seq_len, d_model = x.shape
+        seq_len = x.shape[-2]
 
         q = x @ wq.T
         k = x @ wk.T
         v = x @ wv.T
 
-        q = q.view(batch_size, seq_len, self.n_heads, self.head_dim)
-        k = k.view(batch_size, seq_len, self.n_heads, self.head_dim)
-        v = v.view(batch_size, seq_len, self.n_heads, self.head_dim)
+     #    q = q.view(batch_size, seq_len, self.n_heads, self.head_dim)
+     #    k = k.view(batch_size, seq_len, self.n_heads, self.head_dim)
+     #    v = v.view(batch_size, seq_len, self.n_heads, self.head_dim)
 
-        q = q.transpose(1, 2)
-        k = k.transpose(1, 2)
-        v = v.transpose(1, 2)
+     #    q = q.transpose(1, 2)
+     #    k = k.transpose(1, 2)
+     #    v = v.transpose(1, 2)
+        q = rearrange(
+            q, 
+            "... seq (head d_head) -> ... head seq d_head",
+            head = self.n_heads
+        )
+
+        k = rearrange(
+            k, 
+            "... seq (head d_head) -> ... head seq d_head",
+            head = self.n_heads
+        )
+
+        v = rearrange(
+            v,
+            "... seq (head d_head) -> ... head seq d_head",
+            head = self.n_heads
+        )
 
         mask = torch.triu(torch.ones(seq_len, seq_len, dtype=torch.bool, device=x.device), diagonal=1)
         mask = mask.unsqueeze(0).unsqueeze(0)
 
         out = self.attention(q, k, v, mask)
 
-        out = out.transpose(1, 2)
-        #拼回来
-        out = out.contiguous().view(batch_size, seq_len, d_model)
+        out = rearrange(out, "... head seq d_head -> ... seq (head d_head)")
+
+     #    out = out.transpose(1, 2)
+     #    #拼回来
+     #    out = out.contiguous().view(batch_size, seq_len, d_model)
         #view的时候，要求逻辑与物理存储一致
         #transpose之后，只是改变了逻辑上的顺序，实际在内存中顺序没有改变
         #即修改了Tensor对内存的访问方式（stride）

@@ -20,8 +20,8 @@ class LinearModule(nn.Module):
         # 截断范围是 [a, b]，即 [-3*std, 3*std]
         # 这样避免初始权重出现极端值
 
-        def forward(self, x: torch.Tensor):
-            return x @ self.W.T
+    def forward(self, x: torch.Tensor):
+        return x @ self.W.T
 
 """在讲义中，embedding层在第一步将token_ids映射到d_model维度"""
 class EmbeddingModule(nn.Module):
@@ -36,6 +36,6 @@ class EmbeddingModule(nn.Module):
         std = 1
         torch.nn.init.trunc_normal_(self.embedding_matrix, std=std, a = -3 * std, b = 3 * std)
 
-        def forward(self, token_ids: torch.Tensor):
-            return self.embedding_matrix[token_ids]
+    def forward(self, token_ids: torch.Tensor):
+        return self.embedding_matrix[token_ids]
         # 例如 token_ids 形状 (2, 3)，则输出形状 (2, 3, embedding_dim)
