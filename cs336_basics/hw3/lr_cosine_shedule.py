@@ -31,7 +31,7 @@ class CosineSchedule:
         self.min_learning_rate = min_learning_rate
         self.warmup_iters = warmup_iters
         self.cosine_cycle_iters = cosine_cycle_iters
-
+  ## 
     def __call__(self, it):
         if it < self.warmup_iters:
             return self.max_learning_rate * it / self.warmup_iters
