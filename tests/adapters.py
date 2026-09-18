@@ -19,6 +19,7 @@ from cs336_basics.hw2.causal_multi_head_attention_with_rope import CausalMultiHe
 from cs336_basics.hw2.causal_multi_head_attention import CausalMultiHeadAttention
 from cs336_basics.hw2.transformer_block import TransformerBlock
 from cs336_basics.hw2.transformer_lm import TransformerLM
+from cs336_basics.hw3.cross_entropy import CrossEntropyLoss
 
 def run_linear(
     d_in: int,
@@ -549,7 +550,13 @@ def run_cross_entropy(
     Returns:
         Float[Tensor, ""]: The average cross-entropy loss across examples.
     """
-    raise NotImplementedError
+    # cross_entropy = CrossEntropyLoss(inputs, targets)
+    # return cross_entropy.forward()
+
+    log_p = inputs - torch.logsumexp(inputs, dim=-1, keepdim=True)
+    right_log_p = log_p[torch.arange(inputs.shape[0]), targets]
+
+    return -torch.mean(right_log_p)
 
 
 def run_gradient_clipping(parameters: Iterable[torch.nn.Parameter], max_l2_norm: float) -> None:
@@ -561,16 +568,35 @@ def run_gradient_clipping(parameters: Iterable[torch.nn.Parameter], max_l2_norm:
 
     The gradients of the parameters (parameter.grad) should be modified in-place.
     """
-    raise NotImplementedError
+    '''
+    只保留有梯度的参数
+    '''
+    parameters = [
+        p for p in parameters if p.grad is not None
+    ]
 
+    total_norm_sq = sum(
+        torch.sum(p.grad ** 2)
+        for p in parameters
+    )
 
+    total_norm = torch.sqrt(total_norm_sq)
+
+    if total_norm <= max_l2_norm:
+        return
+    scale = max_l2_norm / (total_norm + 1e-6)
+
+    for p in parameters:
+        p.grad.mul_(scale)
+
+from cs336_basics.hw3.adamw import AdamW
 def get_adamw_cls() -> Any:
     """
     Returns a torch.optim.Optimizer that implements AdamW.
     """
-    raise NotImplementedError
+    return AdamW
 
-
+from cs336_basics.hw3.lr_cosine_shedule import CosineSchedule
 def run_get_lr_cosine_schedule(
     it: int,
     max_learning_rate: float,
@@ -596,7 +622,8 @@ def run_get_lr_cosine_schedule(
     Returns:
         Learning rate at the given iteration under the specified schedule.
     """
-    raise NotImplementedError
+    cs = CosineSchedule(max_learning_rate, min_learning_rate, warmup_iters, cosine_cycle_iters)
+    return cs(it)
 
 
 def run_save_checkpoint(
