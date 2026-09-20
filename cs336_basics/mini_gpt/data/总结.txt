@@ -1,0 +1,14 @@
+txt
+ ↓
+BPE 先得到vocabs和merges，然后构造tokenizer实例,接着得到bin文件
+其中用到了bpe.py   tokenizer_v3.py   save_tokenizer.py   vocab.json   merges.txt   load_tokenizer.py   
+ ↓
+bin
+其中用到了tokenize_dataset.py  train.bin  valid.bin 
+ ↓
+memmap
+ ↓
+get_batch
+其中用到了data_loader.py
+ ↓
+Transformer
