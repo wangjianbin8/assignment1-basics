@@ -1,3 +1,5 @@
+"""生成 0～15 循环的人工 token 数据，保存到 artifacts/demo_data/。"""
+
 from pathlib import Path
 
 import numpy as np

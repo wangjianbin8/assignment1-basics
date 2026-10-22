@@ -1,5 +1,7 @@
 # CS336 Spring 2025 Assignment 1: Basics
 
+中文学习入口：[仓库导航与运行说明](LEARNING_GUIDE.md)。包含文件用途、讲义对应位置和训练/生成命令。
+
 For a full description of the assignment, see the assignment handout at
 [cs336_assignment1_basics.pdf](./cs336_assignment1_basics.pdf)
 

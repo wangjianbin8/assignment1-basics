@@ -1,3 +1,5 @@
+"""讲义 §2 的 BPE 小语料演示；此脚本没有训练完整 TinyStories 数据集。"""
+
 import pickle
 import time
 from pathlib import Path

@@ -1,6 +1,15 @@
+"""讲义 §5.3：训练入口，支持验证、学习率调度和检查点恢复。
+
+运行方式：uv run python -m scripts.train --help
+"""
+
 import numpy as np
 import torch
 import argparse
+from pathlib import Path
+import csv
+import time
+import json
 
 from cs336_basics.transformer_lm import TransformerLM
 from cs336_basics.adamw import AdamW
@@ -89,7 +98,19 @@ def parse_args():
         type=str,
         required=True,
     )
-    
+
+    parser.add_argument(
+        "--checkpoint-dir",
+        type=str,
+        default="artifacts/checkpoints/demo",
+    )
+
+    parser.add_argument(
+        "--save-interval",
+        type=int,
+        default=50,
+    )
+
     return parser.parse_args()
 
 def main():
@@ -145,7 +166,45 @@ def main():
 
         print(f"已恢复存档，之前完成了 {start_step} 次更新")
 
+    if start_step > total_steps:
+        raise ValueError(
+            f"存档已完成 {start_step} 次更新，"
+            f"但目标总步数只有 {total_steps}"
+        )
+
     model.train()
+
+    checkpoint_dir = Path(args.checkpoint_dir)
+    checkpoint_dir.mkdir(parents=True, exist_ok=True)
+
+    # 每次启动创建一个新日志，保留以前的实验记录。
+    log_path = checkpoint_dir / f"metrics_{time.time_ns()}.csv"
+    config_path = log_path.with_suffix(".config.json")
+
+    with config_path.open("w", encoding="utf-8") as f:
+        json.dump(
+            vars(args),
+            f,
+            ensure_ascii=False,
+            indent=2,
+        )
+
+    print(f"实验配置：{config_path}")
+
+    with log_path.open("w", newline="", encoding="utf-8") as f:
+        writer = csv.writer(f)
+        writer.writerow([
+            "step",
+            "elapsed_seconds",
+            "train_loss",
+            "val_loss",
+            "lr",
+        ])
+
+    print(f"实验日志：{log_path}")
+
+    # 从训练循环开始前计时。
+    start_time = time.perf_counter()
 
     for step in range(start_step, total_steps):
         # 1. 设置本轮学习率。
@@ -185,6 +244,23 @@ def main():
         )
         optimizer.step()
 
+        completed_steps = step + 1
+
+        if completed_steps % args.save_interval == 0:
+            checkpoint_path = (
+                checkpoint_dir
+                / f"step_{completed_steps}.pt"
+            )
+
+            save_checkpoint(
+                model=model,
+                optimizer=optimizer,
+                iteration=completed_steps,
+                out=checkpoint_path,
+            )
+
+            print(f"已保存检查点：{checkpoint_path}")
+
         # 7. 打印训练情况。
         if (step + 1) % 10 == 0:
             val_loss = evaluate(
@@ -194,6 +270,22 @@ def main():
                 context_length=context_length,
                 device=device,
             )
+
+            elapsed_seconds = time.perf_counter() - start_time
+
+            with log_path.open(
+                "a",
+                newline="",
+                encoding="utf-8",
+            ) as f:
+                writer = csv.writer(f)
+                writer.writerow([
+                    step + 1,
+                    elapsed_seconds,
+                    loss.item(),
+                    val_loss,
+                    lr,
+                ])
 
             print(
                 f"已完成 {step + 1} 次更新，"
@@ -207,7 +299,7 @@ def main():
         model=model,
         optimizer=optimizer,
         iteration=total_steps,
-        out="checkpoint_demo.pt",
+        out=checkpoint_dir / "final.pt",
     )
 
 
